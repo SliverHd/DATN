@@ -1,0 +1,63 @@
+using Microsoft.EntityFrameworkCore;
+using XepLichGiangDay.Api.Data;
+using XepLichGiangDay.Api.Services;
+using XepLichGiangDay.Api.Services.RangBuoc;
+using XepLichGiangDay.Api.Services.ThuatToan;
+using XepLichGiangDay.Api.Services.ThuatToan.CpSat;
+using XepLichGiangDay.Api.Services.ThuatToan.Genetic;
+
+var builder = WebApplication.CreateBuilder(args);
+
+const string corsPolicy = "ReactFrontend";
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(corsPolicy, policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+// CSDL SQL Server
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    options.UseSqlServer(connectionString);
+});
+
+// Dang ky cac Services nghiep vu
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<NguoiDungService>();
+builder.Services.AddScoped<GiangVienService>();
+builder.Services.AddScoped<HocPhanService>();
+builder.Services.AddScoped<HocKyService>();
+builder.Services.AddScoped<NamHocService>();
+builder.Services.AddScoped<BoMonService>();
+builder.Services.AddScoped<ImportThoiKhoaBieuService>();
+builder.Services.AddScoped<ThoiKhoaBieuService>();
+builder.Services.AddScoped<RangBuocService>();
+
+// Dang ky rang buoc & thuat toan xep lich (Strategy Pattern)
+builder.Services.AddScoped<BoKiemTraRangBuoc>();
+builder.Services.AddScoped<BoDanhGiaPhuongAn>();
+builder.Services.AddScoped<TaoDanhSachUngVien>();
+builder.Services.AddScoped<ISchedulingAlgorithm, GeneticAlgorithmService>();
+builder.Services.AddScoped<ISchedulingAlgorithm, CpSatAlgorithmService>();
+
+var app = builder.Build();
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
+app.UseHttpsRedirection();
+app.UseCors(corsPolicy);
+app.UseAuthorization();
+app.MapControllers();
+
+app.Run();

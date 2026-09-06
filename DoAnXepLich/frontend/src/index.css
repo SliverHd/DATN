@@ -1,0 +1,56 @@
+body {
+  margin: 0;
+  background: #f7f8fa;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  flex: 0 0 250px;
+}
+
+.main-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    flex-basis: auto;
+  }
+}
+
+@media print {
+  .sidebar,
+  header,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+
+  .main-panel {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  .card,
+  .table-responsive {
+    border: none !important;
+    overflow: visible !important;
+  }
+}
