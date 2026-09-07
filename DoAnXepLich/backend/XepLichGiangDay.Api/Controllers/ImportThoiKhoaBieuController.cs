@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using XepLichGiangDay.Api.DTOs.Import;
 using XepLichGiangDay.Api.Services;
@@ -11,7 +10,6 @@ public class ImportThoiKhoaBieuRequest
     public IFormFile File { get; set; } = null!;
 }
 
-[Authorize(Roles = "Admin")]
 [ApiController]
 [Route("api/import-thoi-khoa-bieu")]
 public class ImportThoiKhoaBieuController(ImportThoiKhoaBieuService importService) : ControllerBase

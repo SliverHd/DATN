@@ -153,6 +153,9 @@ function ImportThoiKhoaBieu({ maHocKyChon, onImportThanhCong }: Props) {
             accept=".xlsx, .xls"
             onChange={handleFileChange}
           />
+          <small className="text-muted d-block mt-1" style={{ fontSize: '0.75rem' }}>
+            * Lưu ý: Hệ thống xử lý chuẩn file <strong>.xlsx</strong>. Nếu là file <code>.xls</code> từ trường, bạn mở file trong Excel chọn <em>Save As &rarr; Excel Workbook (.xlsx)</em> nhé.
+          </small>
         </div>
 
         <div className="col-md-3 d-flex gap-2">

@@ -35,73 +35,277 @@ public class ImportThoiKhoaBieuService(AppDbContext context)
 
             if (worksheet == null)
             {
-                throw new ArgumentException("File Excel khong chua trang tinh (worksheet) hop le.");
+                throw new ArgumentException("File Excel không chứa trang tính (worksheet) hợp lệ.");
             }
 
-            var rows = worksheet.RowsUsed().Skip(1).ToList(); // Bỏ qua header
+            var allRows = worksheet.RowsUsed().ToList();
+            if (allRows.Count == 0)
+            {
+                throw new ArgumentException("File Excel không chứa dữ liệu hợp lệ.");
+            }
+
+            // 1. Tự động tìm các dòng header (quét từ dòng 1 đến 15)
+            var colMap = new Dictionary<string, int>();
+            int dataStartRowIdx = -1;
+
+            for (int r = 0; r < Math.Min(15, allRows.Count); r++)
+            {
+                var row = allRows[r];
+                var cellTexts = row.CellsUsed().Select(c => c.GetString().Trim().ToLowerInvariant()).ToList();
+                bool coHocPhan = cellTexts.Any(t => t.Contains("học phần") || t.Contains("hoc phan") || t.Contains("mã môn") || t.Contains("ma mon") || t.Contains("tên môn") || t.Contains("ten mon"));
+                bool coLop = cellTexts.Any(t => t.Contains("mã lớp") || t.Contains("ma lop") || t.Contains("lớp") || t.Contains("lop"));
+                bool coThu = cellTexts.Any(t => t.Contains("thứ") || t.Contains("thu"));
+                bool coTiet = cellTexts.Any(t => t.Contains("tiết") || t.Contains("tiet"));
+
+                if ((coHocPhan && coThu) || (coHocPhan && coTiet) || (coHocPhan && coLop) || (coThu && coTiet))
+                {
+                    foreach (var cell in row.CellsUsed())
+                    {
+                        var text = cell.GetString().Trim().ToLowerInvariant();
+                        if (!string.IsNullOrEmpty(text) && !colMap.ContainsKey(text))
+                            colMap[text] = cell.Address.ColumnNumber;
+                    }
+
+                    dataStartRowIdx = r + 1;
+
+                    // Nếu dòng kế tiếp cũng là tiêu đề con (chứa Thứ, Tiết, Phòng học, Bắt đầu, v.v.)
+                    if (r + 1 < allRows.Count)
+                    {
+                        var nextRow = allRows[r + 1];
+                        var nextTexts = nextRow.CellsUsed().Select(c => c.GetString().Trim().ToLowerInvariant()).ToList();
+                        if (nextTexts.Any(t => t.Contains("thứ") || t.Contains("thu") || t.Contains("tiết") || t.Contains("tiet") || t.Contains("phòng") || t.Contains("phong") || t.Contains("bắt đầu") || t.Contains("kết thúc")))
+                        {
+                            foreach (var cell in nextRow.CellsUsed())
+                            {
+                                var text = cell.GetString().Trim().ToLowerInvariant();
+                                if (!string.IsNullOrEmpty(text) && !colMap.ContainsKey(text))
+                                    colMap[text] = cell.Address.ColumnNumber;
+                            }
+                            dataStartRowIdx = r + 2;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            // 2. Xác định vị trí cột
+            int colMaHp = 2, colTenMon = 3, colMaLop = 4, colTenLop = 5, colThu = 6, colTiet = 7, colTietKetThuc = 8, colPhong = 8, colSoLuongSv = -1, colTuanHoc = 13, colTuTuan = -1, colDenTuan = -1;
+            bool singleTietCol = true;
+
+            if (colMap.Count > 0)
+            {
+                int TimCot(params string[] keywords)
+                {
+                    foreach (var kw in keywords)
+                    {
+                        foreach (var kv in colMap)
+                        {
+                            if (kv.Key.Contains(kw)) return kv.Value;
+                        }
+                    }
+                    return -1;
+                }
+
+                int fMaHp = TimCot("mã học phần", "ma hoc phan", "mã môn", "ma mon");
+                int fTenMon = TimCot("tên môn", "ten mon", "tên học phần", "ten hoc phan");
+                int fMaLop = TimCot("mã lớp học", "ma lop hoc", "mã lớp hp", "ma lop hp", "mã lớp", "ma lop");
+                int fTenLop = TimCot("lớp ghép", "lop ghep", "tên lớp", "ten lop");
+                int fThu = TimCot("thứ", "thu");
+                int fTiet = TimCot("tiết", "tiet");
+                int fTietBatDau = TimCot("tiết bắt đầu", "tiet bat dau", "tiết đầu", "tiet dau");
+                int fTietKetThuc = TimCot("tiết kết thúc", "tiet ket thuc", "tiết cuối", "tiet cuoi");
+                int fPhong = TimCot("phòng", "phong");
+                int fSoLuong = TimCot("số lượng", "so luong", "sĩ số", "si so");
+                int fTuanHoc = TimCot("tuần học", "tuan hoc");
+                int fTuTuan = TimCot("từ tuần", "tu tuan");
+                int fDenTuan = TimCot("đến tuần", "den tuan");
+
+                if (fMaHp > 0) colMaHp = fMaHp;
+                if (fTenMon > 0) colTenMon = fTenMon;
+                if (fMaLop > 0) colMaLop = fMaLop;
+                if (fTenLop > 0) colTenLop = fTenLop;
+                if (fThu > 0) colThu = fThu;
+                if (fPhong > 0) colPhong = fPhong;
+                if (fSoLuong > 0) colSoLuongSv = fSoLuong;
+                if (fTuanHoc > 0) colTuanHoc = fTuanHoc;
+
+                if (fTietBatDau > 0 && fTietKetThuc > 0)
+                {
+                    colTiet = fTietBatDau;
+                    colTietKetThuc = fTietKetThuc;
+                    singleTietCol = false;
+                }
+                else if (fTiet > 0)
+                {
+                    colTiet = fTiet;
+                    singleTietCol = true;
+                }
+
+                if (fTuTuan > 0 && fDenTuan > 0)
+                {
+                    colTuTuan = fTuTuan;
+                    colDenTuan = fDenTuan;
+                }
+            }
+
+            var rows = allRows.Skip(dataStartRowIdx >= 0 ? dataStartRowIdx : 1).ToList();
             if (rows.Count == 0)
             {
-                throw new ArgumentException("File Excel khong chua du lieu lop hoc phan sau dong tieu de.");
+                throw new ArgumentException("File Excel không chứa dữ liệu lớp học phần sau dòng tiêu đề.");
             }
 
             int stt = 1;
 
             foreach (var row in rows)
             {
+                if (!row.CellsUsed().Any()) continue;
+
+                string rawMaHp = colMaHp > 0 ? row.Cell(colMaHp).GetString().Trim() : "";
+                string rawTenMon = colTenMon > 0 ? row.Cell(colTenMon).GetString().Trim() : "";
+                string rawMaLop = colMaLop > 0 ? row.Cell(colMaLop).GetString().Trim() : "";
+                string rawTenLop = colTenLop > 0 ? row.Cell(colTenLop).GetString().Trim() : "";
+                string rawPhong = colPhong > 0 ? row.Cell(colPhong).GetString().Trim() : "";
+
+                if (string.IsNullOrWhiteSpace(rawMaHp) && string.IsNullOrWhiteSpace(rawTenMon) && string.IsNullOrWhiteSpace(rawMaLop))
+                {
+                    continue;
+                }
+
+                string maLopHpTruong = !string.IsNullOrWhiteSpace(rawMaLop)
+                    ? (!string.IsNullOrWhiteSpace(rawMaHp) && rawMaLop != rawMaHp ? $"{rawMaHp}_{rawMaLop}" : rawMaLop)
+                    : rawMaHp;
+
+                string tenLop = !string.IsNullOrWhiteSpace(rawTenLop) ? rawTenLop : (!string.IsNullOrWhiteSpace(rawMaLop) ? rawMaLop : rawTenMon);
+
+                // Parse Thứ
+                int thu = 0;
+                if (colThu > 0)
+                {
+                    var thuStr = row.Cell(colThu).GetString().Trim();
+                    if (int.TryParse(thuStr, out var t)) thu = t;
+                    else if (thuStr.Contains("hai", StringComparison.OrdinalIgnoreCase)) thu = 2;
+                    else if (thuStr.Contains("ba", StringComparison.OrdinalIgnoreCase)) thu = 3;
+                    else if (thuStr.Contains("tư", StringComparison.OrdinalIgnoreCase) || thuStr.Contains("tu", StringComparison.OrdinalIgnoreCase)) thu = 4;
+                    else if (thuStr.Contains("năm", StringComparison.OrdinalIgnoreCase) || thuStr.Contains("nam", StringComparison.OrdinalIgnoreCase)) thu = 5;
+                    else if (thuStr.Contains("sáu", StringComparison.OrdinalIgnoreCase) || thuStr.Contains("sau", StringComparison.OrdinalIgnoreCase)) thu = 6;
+                    else if (thuStr.Contains("bảy", StringComparison.OrdinalIgnoreCase) || thuStr.Contains("bay", StringComparison.OrdinalIgnoreCase)) thu = 7;
+                    else if (thuStr.Contains("nhật", StringComparison.OrdinalIgnoreCase) || thuStr.Contains("nhat", StringComparison.OrdinalIgnoreCase)) thu = 8;
+                }
+
+                // Parse Tiết
+                int tietBatDau = 0, tietKetThuc = 0;
+                if (singleTietCol && colTiet > 0)
+                {
+                    var tietStr = row.Cell(colTiet).GetString().Trim();
+                    var parts = tietStr.Split(new[] { '-', ':', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 2 && int.TryParse(parts[0], out var tbd) && int.TryParse(parts[1], out var tkt))
+                    {
+                        tietBatDau = tbd;
+                        tietKetThuc = tkt;
+                    }
+                    else if (parts.Length == 1 && int.TryParse(parts[0], out var t1))
+                    {
+                        tietBatDau = t1;
+                        tietKetThuc = t1;
+                    }
+                }
+                else
+                {
+                    if (colTiet > 0 && row.Cell(colTiet).TryGetValue<int>(out var tbd)) tietBatDau = tbd;
+                    if (colTietKetThuc > 0 && row.Cell(colTietKetThuc).TryGetValue<int>(out var tkt)) tietKetThuc = tkt;
+                }
+
+                // Parse Tuần
+                int tuTuan = 1, denTuan = 16;
+                if (colTuanHoc > 0)
+                {
+                    var tuanStr = row.Cell(colTuanHoc).GetString();
+                    if (!string.IsNullOrWhiteSpace(tuanStr))
+                    {
+                        int firstWeek = -1;
+                        int lastWeek = -1;
+                        for (int i = 0; i < tuanStr.Length; i++)
+                        {
+                            char ch = tuanStr[i];
+                            if (ch != ' ' && ch != '-' && ch != '_')
+                            {
+                                if (firstWeek == -1) firstWeek = i + 1;
+                                lastWeek = i + 1;
+                            }
+                        }
+
+                        if (firstWeek > 0 && lastWeek >= firstWeek)
+                        {
+                            tuTuan = firstWeek;
+                            denTuan = lastWeek;
+                        }
+                        else if (int.TryParse(tuanStr.Trim(), out var singleTuan) && singleTuan > 0 && singleTuan <= 53)
+                        {
+                            tuTuan = singleTuan;
+                            denTuan = singleTuan;
+                        }
+                    }
+                }
+                else if (colTuTuan > 0 && colDenTuan > 0)
+                {
+                    if (row.Cell(colTuTuan).TryGetValue<int>(out var tt) && tt > 0 && tt <= 53) tuTuan = tt;
+                    if (row.Cell(colDenTuan).TryGetValue<int>(out var dt) && dt > 0 && dt <= 53) denTuan = dt;
+                }
+
+                int soLuongSv = 40;
+                if (colSoLuongSv > 0 && row.Cell(colSoLuongSv).TryGetValue<int>(out var sl) && sl > 0)
+                {
+                    soLuongSv = sl;
+                }
+
                 var dto = new DongThoiKhoaBieuImportDto
                 {
                     SoThuTu = stt++,
-                    MaLopHocPhanTruong = row.Cell(1).GetString().Trim(),
-                    TenLop = row.Cell(2).GetString().Trim(),
-                    MaHocPhanTruong = row.Cell(3).GetString().Trim(),
-                    TenHocPhan = row.Cell(4).GetString().Trim(),
-                    SoLuongSinhVien = row.Cell(5).TryGetValue<int>(out var sl) ? sl : 40,
-                    Thu = row.Cell(6).TryGetValue<int>(out var thu) ? thu : 0,
-                    TietBatDau = row.Cell(7).TryGetValue<int>(out var tbd) ? tbd : 0,
-                    TietKetThuc = row.Cell(8).TryGetValue<int>(out var tkt) ? tkt : 0,
-                    PhongHoc = row.Cell(9).GetString().Trim(),
-                    TuTuan = row.Cell(10).TryGetValue<int>(out var tt) ? tt : 1,
-                    DenTuan = row.Cell(11).TryGetValue<int>(out var dt) ? dt : 15,
+                    MaLopHocPhanTruong = maLopHpTruong,
+                    TenLop = tenLop,
+                    MaHocPhanTruong = rawMaHp,
+                    TenHocPhan = rawTenMon,
+                    SoLuongSinhVien = soLuongSv,
+                    Thu = thu,
+                    TietBatDau = tietBatDau,
+                    TietKetThuc = tietKetThuc,
+                    PhongHoc = rawPhong,
+                    TuTuan = tuTuan,
+                    DenTuan = denTuan,
                 };
 
                 // Kiểm tra mã lớp học phần
                 if (string.IsNullOrWhiteSpace(dto.MaLopHocPhanTruong))
                 {
-                    dto.DanhSachLoi.Add("Ma lop hoc phan khong duoc de trong.");
+                    dto.DanhSachLoi.Add("Mã lớp học phần không được để trống.");
                 }
 
                 // Kiểm tra thứ trong tuần
                 if (dto.Thu < 2 || dto.Thu > 8)
                 {
-                    dto.DanhSachLoi.Add("Thu phai tu 2 den 8 (8 la Chu nhat).");
+                    dto.DanhSachLoi.Add("Thứ phải từ 2 đến 8 (8 là Chủ nhật).");
                 }
 
-                // Kiểm tra tiết bắt đầu & kết thúc
-                if (dto.TietBatDau < 1 || dto.TietBatDau > 12)
+                // Kiểm tra tiết bắt đầu & kết thúc (đại học có ca tối từ 13 đến 17)
+                if (dto.TietBatDau < 1 || dto.TietBatDau > 17)
                 {
-                    dto.DanhSachLoi.Add("Tiet bat dau phai tu 1 den 12.");
+                    dto.DanhSachLoi.Add("Tiết bắt đầu phải từ 1 đến 17.");
                 }
 
-                if (dto.TietKetThuc < dto.TietBatDau || dto.TietKetThuc > 12)
+                if (dto.TietKetThuc < dto.TietBatDau || dto.TietKetThuc > 17)
                 {
-                    dto.DanhSachLoi.Add("Tiet ket thuc phai tu tiet bat dau den 12.");
+                    dto.DanhSachLoi.Add("Tiết kết thúc phải từ tiết bắt đầu đến 17.");
                 }
 
                 // Kiểm tra tuần học
                 if (dto.TuTuan < 1 || dto.TuTuan > 53)
                 {
-                    dto.DanhSachLoi.Add("Tu tuan phai tu 1 den 53.");
+                    dto.DanhSachLoi.Add("Từ tuần phải từ 1 đến 53.");
                 }
 
                 if (dto.DenTuan < dto.TuTuan || dto.DenTuan > 53)
                 {
-                    dto.DanhSachLoi.Add("Den tuan phai lon hon hoac bang tu tuan va toi da 53.");
-                }
-
-                // Kiểm tra số lượng sinh viên
-                if (dto.SoLuongSinhVien < 0 || dto.SoLuongSinhVien > 500)
-                {
-                    dto.DanhSachLoi.Add("So luong sinh vien phai tu 0 den 500.");
+                    dto.DanhSachLoi.Add("Đến tuần phải lớn hơn hoặc bằng từ tuần và tối đa 53.");
                 }
 
                 // Khớp học phần trong hệ thống
@@ -120,10 +324,6 @@ public class ImportThoiKhoaBieuService(AppDbContext context)
                     if (string.IsNullOrWhiteSpace(dto.TenHocPhan))
                     {
                         dto.TenHocPhan = dto.MaHocPhanTruong;
-                    }
-                    if (string.IsNullOrWhiteSpace(dto.TenHocPhan))
-                    {
-                        dto.DanhSachLoi.Add("Khong co thong tin hoc phan hoac ma hoc phan.");
                     }
                 }
 
@@ -149,7 +349,11 @@ public class ImportThoiKhoaBieuService(AppDbContext context)
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Khong the doc file Excel: {ex.Message}");
+            if (ext == ".xls" || ex.Message.Contains("corrupted", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("package", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("File bạn tải lên là định dạng Excel cũ (.xls). Vui lòng mở file trong Microsoft Excel và chọn File -> Save As (Lưu dưới dạng) -> Excel Workbook (*.xlsx) rồi tải lại lên hệ thống.");
+            }
+            throw new InvalidOperationException($"Không thể đọc file Excel: {ex.Message}");
         }
     }
 

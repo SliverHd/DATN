@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using XepLichGiangDay.Api.Services;
 
@@ -15,7 +14,6 @@ public class ThoiKhoaBieuController(ThoiKhoaBieuService service) : ControllerBas
         return Ok(list);
     }
 
-    [Authorize(Roles = "Admin")]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
