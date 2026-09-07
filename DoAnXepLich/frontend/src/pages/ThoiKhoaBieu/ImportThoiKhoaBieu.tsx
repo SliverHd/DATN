@@ -121,15 +121,8 @@ function ImportThoiKhoaBieu({ maHocKyChon, onImportThanhCong }: Props) {
 
   return (
     <div className="card border p-3 bg-white mt-3">
-      <div className="d-flex justify-content-between align-items-center mb-3">
+      <div className="mb-3">
         <h3 className="h6 mb-0 fw-bold">Import thời khóa biểu từ Excel</h3>
-        <a
-          href="/api/import-thoi-khoa-bieu/file-mau"
-          className="btn btn-outline-secondary btn-sm"
-          download
-        >
-          ⬇ Tải file Excel mẫu
-        </a>
       </div>
 
       {loi && <div className="alert alert-danger py-2 small">{loi}</div>}
