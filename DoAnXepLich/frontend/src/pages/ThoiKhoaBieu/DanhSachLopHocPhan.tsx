@@ -56,79 +56,6 @@ function DanhSachLopHocPhan() {
     }
   }
 
-  const handleTaiFileTkb = () => {
-    if (danhSachLop.length === 0) {
-      alert('Học kỳ này chưa có dữ liệu thời khóa biểu để tải về.')
-      return
-    }
-
-    const tenHk = danhSachHocKy.find((h) => h.maHocKy === maHocKy)?.tenHocKy || `HocKy_${maHocKy}`
-
-    let html = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
-        <style>
-          table { border-collapse: collapse; width: 100%; }
-          th { background-color: #f2f2f2; font-weight: bold; border: 1px solid #ddd; padding: 8px; text-align: left; }
-          td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        </style>
-      </head>
-      <body>
-        <h3>THỜI KHÓA BIỂU - ${tenHk}</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>STT</th>
-              <th>Mã lớp HP</th>
-              <th>Tên lớp</th>
-              <th>Môn học</th>
-              <th>Số TC</th>
-              <th>Sĩ số</th>
-              <th>Thứ</th>
-              <th>Tiết</th>
-              <th>Phòng</th>
-              <th>Tuần</th>
-            </tr>
-          </thead>
-          <tbody>
-    `
-
-    danhSachLop.forEach((lop, idx) => {
-      html += `
-        <tr>
-          <td>${idx + 1}</td>
-          <td>${lop.maLopHocPhanTruong}</td>
-          <td>${lop.tenLop}</td>
-          <td>${lop.tenHocPhan || ''}</td>
-          <td>${lop.soTinChi}</td>
-          <td>${lop.soLuongSinhVien}</td>
-          <td>${lop.thu === 8 ? 'Chủ nhật' : `Thứ ${lop.thu}`}</td>
-          <td>${lop.tietBatDau} - ${lop.tietKetThuc}</td>
-          <td>${lop.phongHoc || ''}</td>
-          <td>${lop.tuTuan} - ${lop.denTuan}</td>
-        </tr>
-      `
-    })
-
-    html += `
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `
-
-    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `ThoiKhoaBieu_${tenHk.replace(/\s+/g, '_')}.xls`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-
   return (
     <section>
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -137,21 +64,12 @@ function DanhSachLopHocPhan() {
           <p className="text-muted small mb-0">
             {isAdmin
               ? 'Quản lý các lớp học phần và lịch học cố định theo từng học kỳ'
-              : 'Xem và tải file lịch học của các lớp học phần theo từng học kỳ'}
+              : 'Xem lịch học của các lớp học phần theo từng học kỳ'}
           </p>
         </div>
 
         <div className="d-flex align-items-center gap-2">
-          <button
-            className="btn btn-outline-success btn-sm"
-            onClick={handleTaiFileTkb}
-            title="Tải file thời khóa biểu về máy"
-            disabled={danhSachLop.length === 0}
-          >
-            ⬇ Tải file TKB
-          </button>
-
-          <label className="form-label small fw-semibold mb-0 ms-2">Học kỳ:</label>
+          <label className="form-label small fw-semibold mb-0">Học kỳ:</label>
           <select
             className="form-select form-select-sm"
             style={{ width: '180px' }}
