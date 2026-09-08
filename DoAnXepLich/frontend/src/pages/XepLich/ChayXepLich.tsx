@@ -1,176 +1,121 @@
-import { useState, type FormEvent } from 'react'
-import { xepLichApi } from '../../api/xepLichApi'
-import type { KetQuaXepLich, YeuCauXepLich } from '../../types/xepLich'
+import { useState } from 'react';
+import { BangDieuKhienXepLich } from '../../components/BangDieuKhienXepLich';
+import { MaTranThoiKhoaBieu } from '../../components/MaTranThoiKhoaBieu';
+import { dichVuXepLich } from '../../api/dichVuXepLich'; // nếu bạn để ở src/services thì đổi thành '../../services/dichVuXepLich'
+import type {
+  LopHocPhanTKB,
+  ChiTietPhanCong,
+  KetQuaDanhGiaRangBuocMem
+} from '../../types/kieuDuLieuXepLich';
 
-function ChayXepLich() {
-  const [form, setForm] = useState<YeuCauXepLich>({
-    maHocKy: 1,
-    thuatToan: 'GA',
-    kichThuocQuanThe: 50,
-    soTheHe: 100,
-    tyLeLaiGhep: 0.8,
-    tyLeDotBien: 0.05,
-  })
-  const [ketQua, setKetQua] = useState<KetQuaXepLich | null>(null)
-  const [dangChay, setDangChay] = useState(false)
-  const [loi, setLoi] = useState('')
+// Dữ liệu mẫu lớp học phần ban đầu để vẽ lưới ma trận
+const DANH_SACH_LOP_BAN_DAU: LopHocPhanTKB[] = [
+  { maLopHocPhan: 'LHP01', tenLopHocPhan: 'Cơ học kết cấu 1', maMonHoc: 'XD01', maPhong: 'H1-201', thuTrongTuan: 2, tietBatDau: 1, soTiet: 3 },
+  { maLopHocPhan: 'LHP02', tenLopHocPhan: 'Bê tông cốt thép 1', maMonHoc: 'XD02', maPhong: 'H1-202', thuTrongTuan: 2, tietBatDau: 4, soTiet: 3 },
+  { maLopHocPhan: 'LHP03', tenLopHocPhan: 'Kiến trúc dân dụng', maMonHoc: 'XD03', maPhong: 'H2-101', thuTrongTuan: 3, tietBatDau: 1, soTiet: 3, maGVPhanCongTruoc: 'GV01', tenGVPhanCongTruoc: 'Thầy Thoan' },
+  { maLopHocPhan: 'LHP04', tenLopHocPhan: 'Sức bền vật liệu', maMonHoc: 'XD04', maPhong: 'H1-301', thuTrongTuan: 4, tietBatDau: 7, soTiet: 3 },
+  { maLopHocPhan: 'LHP05', tenLopHocPhan: 'Tin học chuyên ngành XD', maMonHoc: 'XD05', maPhong: 'PM-102', thuTrongTuan: 6, tietBatDau: 1, soTiet: 3 }
+];
 
-  const capNhatSo = (name: keyof YeuCauXepLich, value: string) => {
-    setForm((current) => ({
-      ...current,
-      [name]: value === '' ? undefined : Number(value),
-    }))
-  }
+export default function ChayXepLich() {
+  const [danhSachLop] = useState<LopHocPhanTKB[]>(DANH_SACH_LOP_BAN_DAU);
+  const [danhSachPhanCong, setDanhSachPhanCong] = useState<ChiTietPhanCong[]>([]);
+  const [dangXuLy, setDangXuLy] = useState(false);
+  const [thoiGianChayMs, setThoiGianChayMs] = useState<number | undefined>(undefined);
+  const [diemDanhGiaMem, setDiemDanhGiaMem] = useState<KetQuaDanhGiaRangBuocMem | null>(null);
+  const [hocKyHienTai, setHocKyHienTai] = useState('HK1-2026-2027');
 
-  const chayXepLich = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setDangChay(true)
-    setLoi('')
-    setKetQua(null)
-
-    const payload =
-      form.thuatToan === 'CP_SAT'
-        ? { maHocKy: form.maHocKy, thuatToan: form.thuatToan }
-        : form
-
+  // Kích hoạt chạy thuật toán
+  const handleChayXepLich = async (maHocKi: string) => {
+    setDangXuLy(true);
+    setHocKyHienTai(maHocKi);
     try {
-      const response = await xepLichApi.chayXepLich(payload)
-      setKetQua(response.data)
-    } catch {
-      setLoi('Khong chay duoc thuat toan xep lich.')
+      const phanHoi = await dichVuXepLich.chayTheoHocKy(maHocKi);
+      setDanhSachPhanCong(phanHoi.ketQua.danhSachPhanCong);
+      setThoiGianChayMs(phanHoi.ketQua.thoiGianChayMs);
+      setDiemDanhGiaMem(phanHoi.danhGiaRangBuocMem);
+    } catch (error) {
+      console.error('Lỗi khi gọi API xếp lịch:', error);
+      alert('Không thể kết nối đến Backend! Hãy kiểm tra backend đang chạy ở cổng 5005.');
     } finally {
-      setDangChay(false)
+      setDangXuLy(false);
     }
-  }
+  };
+
+  // Đổi giảng viên và khóa bán tự động
+  const handleKhoaGiangVien = async (maLop: string, maGV: string, tenGV: string) => {
+    try {
+      await dichVuXepLich.khoaGiangVien(hocKyHienTai, maLop, maGV, tenGV);
+      setDanhSachPhanCong(prev =>
+        prev.map(item =>
+          item.maLopHocPhan === maLop
+            ? { ...item, maGV, tenGV, daKhoaThuCong: true }
+            : item
+        )
+      );
+      alert(`Đã khóa thành công lớp ${maLop} cho ${tenGV}!`);
+    } catch (error) {
+      console.error('Lỗi khóa giảng viên:', error);
+      alert('Lỗi khi lưu trạng thái khóa!');
+    }
+  };
 
   return (
-    <section>
-      <h2 className="h4 mb-3">Chay xep lich</h2>
+    <div style={{ padding: '20px' }}>
+      <h2 style={{ color: '#1890ff', marginBottom: '8px' }}>
+        XẾP THỜI KHÓA BIỂU BỘ MÔN (GOOGLE CP-SAT)
+      </h2>
+      <p style={{ color: '#666', marginBottom: '20px' }}>
+        Phân công giảng viên tự động, đo lường thời gian thực tế và can thiệp bán tự động.
+      </p>
 
-      <form className="row g-3" onSubmit={chayXepLich}>
-        <div className="col-md-4">
-          <label className="form-label" htmlFor="maHocKy">
-            Hoc ky
-          </label>
-          <input
-            id="maHocKy"
-            type="number"
-            min={1}
-            className="form-control"
-            value={form.maHocKy}
-            onChange={(event) => capNhatSo('maHocKy', event.target.value)}
-          />
-        </div>
+      {/* Bảng điều khiển */}
+      <BangDieuKhienXepLich
+        onChayXepLich={handleChayXepLich}
+        dangXuLy={dangXuLy}
+        thoiGianChayMs={thoiGianChayMs}
+      />
 
-        <div className="col-md-4">
-          <label className="form-label" htmlFor="thuatToan">
-            Thuat toan
-          </label>
-          <select
-            id="thuatToan"
-            className="form-select"
-            value={form.thuatToan}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                thuatToan: event.target.value as YeuCauXepLich['thuatToan'],
-              }))
-            }
-          >
-            <option value="GA">Genetic Algorithm</option>
-            <option value="CP_SAT">CP-SAT</option>
-          </select>
-        </div>
-
-        {form.thuatToan === 'GA' && (
-          <>
-            <div className="col-md-4">
-              <label className="form-label" htmlFor="kichThuocQuanThe">
-                Kich thuoc quan the
-              </label>
-              <input
-                id="kichThuocQuanThe"
-                type="number"
-                min={1}
-                className="form-control"
-                value={form.kichThuocQuanThe ?? ''}
-                onChange={(event) =>
-                  capNhatSo('kichThuocQuanThe', event.target.value)
-                }
-              />
-            </div>
-
-            <div className="col-md-4">
-              <label className="form-label" htmlFor="soTheHe">
-                So the he
-              </label>
-              <input
-                id="soTheHe"
-                type="number"
-                min={1}
-                className="form-control"
-                value={form.soTheHe ?? ''}
-                onChange={(event) => capNhatSo('soTheHe', event.target.value)}
-              />
-            </div>
-
-            <div className="col-md-4">
-              <label className="form-label" htmlFor="tyLeLaiGhep">
-                Ty le lai ghep
-              </label>
-              <input
-                id="tyLeLaiGhep"
-                type="number"
-                min={0}
-                max={1}
-                step={0.01}
-                className="form-control"
-                value={form.tyLeLaiGhep ?? ''}
-                onChange={(event) =>
-                  capNhatSo('tyLeLaiGhep', event.target.value)
-                }
-              />
-            </div>
-
-            <div className="col-md-4">
-              <label className="form-label" htmlFor="tyLeDotBien">
-                Ty le dot bien
-              </label>
-              <input
-                id="tyLeDotBien"
-                type="number"
-                min={0}
-                max={1}
-                step={0.01}
-                className="form-control"
-                value={form.tyLeDotBien ?? ''}
-                onChange={(event) =>
-                  capNhatSo('tyLeDotBien', event.target.value)
-                }
-              />
-            </div>
-          </>
-        )}
-
-        <div className="col-12">
-          <button type="submit" className="btn btn-primary" disabled={dangChay}>
-            {dangChay ? 'Dang chay...' : 'Chay xep lich'}
-          </button>
-        </div>
-      </form>
-
-      {loi && <div className="alert alert-warning mt-3">{loi}</div>}
-
-      {ketQua && (
-        <div className="border rounded p-3 mt-4">
-          <h3 className="h5">Ket qua tam</h3>
-          <p className="mb-1">Thuat toan: {ketQua.thuatToan}</p>
-          <p className="mb-1">Tong diem phat: {ketQua.tongDiemPhat}</p>
-          <p className="mb-0">Trang thai: {ketQua.trangThai}</p>
+      {/* Điểm chất lượng mềm */}
+      {diemDanhGiaMem && (
+        <div
+          style={{
+            display: 'flex',
+            gap: '20px',
+            backgroundColor: '#e6f7ff',
+            border: '1px solid #91d5ff',
+            borderRadius: '6px',
+            padding: '12px 16px',
+            marginBottom: '20px'
+          }}
+        >
+          <div>
+            <b>🏆 Điểm chất lượng:</b>{' '}
+            <span style={{ color: '#1890ff', fontSize: '16px', fontWeight: 'bold' }}>
+              {diemDanhGiaMem.tongDiemChatLuong}
+            </span>
+          </div>
+          <div>
+            <b>⭐ Hài lòng nguyện vọng:</b>{' '}
+            <span style={{ color: '#52c41a' }}>+{diemDanhGiaMem.diemThoaManNguyenVong}</span>
+          </div>
+          <div>
+            <b>⚖️ Phạt lệch tải:</b>{' '}
+            <span style={{ color: '#ff4d4f' }}>-{diemDanhGiaMem.diemPhatLechDinhMuc}</span>
+          </div>
+          <div>
+            <b>📅 Phạt rải lịch:</b>{' '}
+            <span style={{ color: '#fa8c16' }}>-{diemDanhGiaMem.diemPhatRaiLich}</span>
+          </div>
         </div>
       )}
-    </section>
-  )
-}
 
-export default ChayXepLich
+      {/* Lưới Ma trận TKB */}
+      <MaTranThoiKhoaBieu
+        danhSachLop={danhSachLop}
+        danhSachPhanCong={danhSachPhanCong}
+        onKhoaGiangVien={handleKhoaGiangVien}
+      />
+    </div>
+  );
+}
