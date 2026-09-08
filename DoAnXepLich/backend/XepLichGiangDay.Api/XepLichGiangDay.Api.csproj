@@ -21,6 +21,13 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\XepLichGiangDay.Engine.CPSat\XepLichGiangDay.Engine.CPSat.csproj" />
+    <ProjectReference Include="..\XepLichGiangDay.Core\XepLichGiangDay.Core.csproj" />
+    <ProjectReference Include="..\XepLichGiangDay.Infrastructure\XepLichGiangDay.Infrastructure.csproj" />
+    <ProjectReference Include="..\XepLichGiangDay.Engine.GA\XepLichGiangDay.Engine.GA.csproj" />
+  </ItemGroup>
+
   
 
 </Project>

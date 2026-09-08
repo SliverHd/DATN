@@ -15,7 +15,7 @@ import DanhSachNguoiDung from './pages/NguoiDung/DanhSachNguoiDung'
 import DanhSachBoMon from './pages/BoMon/DanhSachBoMon'
 
 function ProtectedLayout() {
-  const { user, dangTai } = useAuth()
+ /* const { user, dangTai } = useAuth()
 
   if (dangTai) {
     return <div className="p-4 text-center text-muted">Đang tải thông tin...</div>
@@ -23,16 +23,16 @@ function ProtectedLayout() {
 
   if (!user) {
     return <Navigate to="/login" replace />
-  }
+  }   */
 
   return <MainLayout />
 }
 
 function AdminOnlyRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
+ /* const { user } = useAuth()
   if (user?.vaiTro !== 'Admin') {
-    return <Navigate to="/" replace />
-  }
+    return <Navigate to="/" replace /> 
+  }  */
   return <>{children}</>
 }
 
