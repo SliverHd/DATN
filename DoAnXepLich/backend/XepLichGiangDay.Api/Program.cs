@@ -42,6 +42,7 @@ builder.Services.AddScoped<BoMonService>();
 builder.Services.AddScoped<ImportThoiKhoaBieuService>();
 builder.Services.AddScoped<ThoiKhoaBieuService>();
 builder.Services.AddScoped<RangBuocService>();
+builder.Services.AddScoped<NguyenVongService>();
 
 // Dang ky rang buoc & thuat toan xep lich (Strategy Pattern)
 builder.Services.AddScoped<BoKiemTraRangBuoc>();

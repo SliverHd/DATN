@@ -9,23 +9,33 @@ public class GiangVienService(AppDbContext context)
 {
     public async Task<List<GiangVienDto>> GetAllAsync()
     {
-        return await context.GiangVien
-            .Select(x => new GiangVienDto
-            {
-                MaGiangVien = x.MaGiangVien,
-                HoTen = x.HoTen,
-                Email = x.Email,
-                SoDienThoai = x.SoDienThoai,
-                ChucDanh = x.ChucDanh,
-                TrangThai = x.TrangThai
-            })
-            .ToListAsync();
+        var boMons = await context.BoMon.ToDictionaryAsync(b => b.MaBoMon, b => b.TenBoMon);
+        var list = await context.GiangVien.ToListAsync();
+
+        return list.Select(x => new GiangVienDto
+        {
+            MaGiangVien = x.MaGiangVien,
+            HoTen = x.HoTen,
+            Email = x.Email,
+            SoDienThoai = x.SoDienThoai,
+            ChucDanh = x.ChucDanh,
+            MaBoMon = x.MaBoMon,
+            TenBoMon = x.MaBoMon.HasValue && boMons.TryGetValue(x.MaBoMon.Value, out var ten) ? ten : null,
+            TrangThai = x.TrangThai
+        }).ToList();
     }
 
     public async Task<GiangVienDto?> GetByIdAsync(int id)
     {
         var item = await context.GiangVien.FindAsync(id);
         if (item is null) return null;
+
+        string? tenBoMon = null;
+        if (item.MaBoMon.HasValue)
+        {
+            var bm = await context.BoMon.FindAsync(item.MaBoMon.Value);
+            tenBoMon = bm?.TenBoMon;
+        }
 
         return new GiangVienDto
         {
@@ -34,6 +44,8 @@ public class GiangVienService(AppDbContext context)
             Email = item.Email,
             SoDienThoai = item.SoDienThoai,
             ChucDanh = item.ChucDanh,
+            MaBoMon = item.MaBoMon,
+            TenBoMon = tenBoMon,
             TrangThai = item.TrangThai
         };
     }
@@ -46,11 +58,19 @@ public class GiangVienService(AppDbContext context)
             Email = dto.Email,
             SoDienThoai = dto.SoDienThoai,
             ChucDanh = dto.ChucDanh,
-            TrangThai = dto.TrangThai
+            MaBoMon = dto.MaBoMon,
+            TrangThai = string.IsNullOrWhiteSpace(dto.TrangThai) ? "DangLamViec" : dto.TrangThai
         };
 
         context.GiangVien.Add(item);
         await context.SaveChangesAsync();
+
+        string? tenBoMon = null;
+        if (item.MaBoMon.HasValue)
+        {
+            var bm = await context.BoMon.FindAsync(item.MaBoMon.Value);
+            tenBoMon = bm?.TenBoMon;
+        }
 
         return new GiangVienDto
         {
@@ -59,6 +79,8 @@ public class GiangVienService(AppDbContext context)
             Email = item.Email,
             SoDienThoai = item.SoDienThoai,
             ChucDanh = item.ChucDanh,
+            MaBoMon = item.MaBoMon,
+            TenBoMon = tenBoMon,
             TrangThai = item.TrangThai
         };
     }
@@ -72,6 +94,7 @@ public class GiangVienService(AppDbContext context)
         item.Email = dto.Email;
         item.SoDienThoai = dto.SoDienThoai;
         item.ChucDanh = dto.ChucDanh;
+        item.MaBoMon = dto.MaBoMon;
         item.TrangThai = dto.TrangThai;
 
         await context.SaveChangesAsync();

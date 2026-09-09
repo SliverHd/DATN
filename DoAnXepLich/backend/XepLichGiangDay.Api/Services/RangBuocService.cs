@@ -84,7 +84,7 @@ public class RangBuocService(AppDbContext context, BoKiemTraRangBuoc boKiemTra)
             throw new ArgumentException("Hoc ky khong ton tai trong he thong.");
         }
 
-        var dsGiangVien = await context.GiangVien.Where(x => x.TrangThai == "DangHoatDong").ToListAsync();
+        var dsGiangVien = await context.GiangVien.Where(x => x.TrangThai == "DangLamViec").ToListAsync();
         var dsDinhMuc = await context.DinhMucGiangVien.Where(x => x.MaHocKy == maHocKy).ToListAsync();
 
         return dsGiangVien.Select(gv =>
@@ -179,7 +179,7 @@ public class RangBuocService(AppDbContext context, BoKiemTraRangBuoc boKiemTra)
             throw new ArgumentException("Hoc ky khong ton tai trong he thong.");
         }
 
-        var dsGiangVien = await context.GiangVien.Where(x => x.TrangThai == "DangHoatDong").ToListAsync();
+        var dsGiangVien = await context.GiangVien.Where(x => x.TrangThai == "DangLamViec").ToListAsync();
         var dsDinhMuc = await context.DinhMucGiangVien.Where(x => x.MaHocKy == dto.MaHocKy).ToListAsync();
 
         foreach (var gv in dsGiangVien)

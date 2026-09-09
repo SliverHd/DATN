@@ -1,6 +1,5 @@
+import axiosClient from './axiosClient';
 import type { KetQuaXepLich, KetQuaDanhGiaRangBuocMem } from '../types/kieuDuLieuXepLich';
-
-const API_BASE_URL = 'http://localhost:5005/api/DieuPhoiXepLich';
 
 export interface PhanHoiXepLich {
   maHocKi: string;
@@ -12,28 +11,21 @@ export interface PhanHoiXepLich {
 export const dichVuXepLich = {
   // 1. Gọi API xếp lịch theo học kỳ
   chayTheoHocKy: async (maHocKi: string): Promise<PhanHoiXepLich> => {
-    const res = await fetch(`${API_BASE_URL}/chay-theo-hoc-ky?maHocKi=${encodeURIComponent(maHocKi)}`, {
-      method: 'POST'
-    });
-    if (!res.ok) {
-      throw new Error(`Lỗi từ máy chủ: ${res.statusText}`);
-    }
-    return res.json();
+    const res = await axiosClient.post<PhanHoiXepLich>(
+      `/DieuPhoiXepLich/chay-theo-hoc-ky?maHocKi=${encodeURIComponent(maHocKi)}`
+    );
+    return res.data;
   },
 
   // 2. Gọi API khóa giảng viên thủ công (Bán tự động)
   khoaGiangVien: async (maHocKi: string, maLop: string, maGV: string, tenGV: string) => {
-    const res = await fetch(`${API_BASE_URL}/khoa-giang-vien-thu-cong`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        maHocKi,
-        maLopHocPhan: maLop,
-        maGVMoi: maGV,
-        tenGVMoi: tenGV,
-        daKhoa: true
-      })
+    const res = await axiosClient.post('/DieuPhoiXepLich/khoa-giang-vien-thu-cong', {
+      maHocKi,
+      maLopHocPhan: maLop,
+      maGVMoi: maGV,
+      tenGVMoi: tenGV,
+      daKhoa: true,
     });
-    return res.json();
-  }
+    return res.data;
+  },
 };
