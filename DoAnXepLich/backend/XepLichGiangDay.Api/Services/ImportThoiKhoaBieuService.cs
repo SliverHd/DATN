@@ -89,7 +89,7 @@ public class ImportThoiKhoaBieuService(AppDbContext context)
             }
 
             // 2. Xác định vị trí cột
-            int colMaHp = 2, colTenMon = 3, colMaLop = 4, colTenLop = 5, colThu = 6, colTiet = 7, colTietKetThuc = 8, colPhong = 8, colSoLuongSv = -1, colTuanHoc = 13, colTuTuan = -1, colDenTuan = -1;
+            int colMaHp = 2, colTenMon = 3, colMaLop = 4, colTenLop = 5, colThu = 6, colTiet = 7, colTietKetThuc = 8, colPhong = 8, colSoLuongSv = -1, colSoTc = 9, colTuanHoc = 13, colTuTuan = -1, colDenTuan = -1;
             bool singleTietCol = true;
 
             if (colMap.Count > 0)
@@ -116,6 +116,7 @@ public class ImportThoiKhoaBieuService(AppDbContext context)
                 int fTietKetThuc = TimCot("tiết kết thúc", "tiet ket thuc", "tiết cuối", "tiet cuoi");
                 int fPhong = TimCot("phòng", "phong");
                 int fSoLuong = TimCot("số lượng", "so luong", "sĩ số", "si so");
+                int fSoTc = TimCot("số tc", "so tc", "số tín chỉ", "so tin chi", "tín chỉ", "tin chi", "tc");
                 int fTuanHoc = TimCot("tuần học", "tuan hoc");
                 int fTuTuan = TimCot("từ tuần", "tu tuan");
                 int fDenTuan = TimCot("đến tuần", "den tuan");
@@ -127,6 +128,7 @@ public class ImportThoiKhoaBieuService(AppDbContext context)
                 if (fThu > 0) colThu = fThu;
                 if (fPhong > 0) colPhong = fPhong;
                 if (fSoLuong > 0) colSoLuongSv = fSoLuong;
+                if (fSoTc > 0) colSoTc = fSoTc;
                 if (fTuanHoc > 0) colTuanHoc = fTuanHoc;
 
                 if (fTietBatDau > 0 && fTietKetThuc > 0)
@@ -258,6 +260,27 @@ public class ImportThoiKhoaBieuService(AppDbContext context)
                     soLuongSv = sl;
                 }
 
+                int soTinChi = 3;
+                if (colSoTc > 0)
+                {
+                    if (row.Cell(colSoTc).TryGetValue<int>(out var stcVal) && stcVal > 0)
+                    {
+                        soTinChi = stcVal;
+                    }
+                    else if (row.Cell(colSoTc).TryGetValue<double>(out var stcDouble) && stcDouble > 0)
+                    {
+                        soTinChi = (int)stcDouble;
+                    }
+                    else
+                    {
+                        var tcStr = row.Cell(colSoTc).GetString().Trim();
+                        if (int.TryParse(tcStr, out var stc) && stc > 0)
+                        {
+                            soTinChi = stc;
+                        }
+                    }
+                }
+
                 var dto = new DongThoiKhoaBieuImportDto
                 {
                     SoThuTu = stt++,
@@ -266,6 +289,7 @@ public class ImportThoiKhoaBieuService(AppDbContext context)
                     MaHocPhanTruong = rawMaHp,
                     TenHocPhan = rawTenMon,
                     SoLuongSinhVien = soLuongSv,
+                    SoTinChi = soTinChi,
                     Thu = thu,
                     TietBatDau = tietBatDau,
                     TietKetThuc = tietKetThuc,
@@ -278,6 +302,12 @@ public class ImportThoiKhoaBieuService(AppDbContext context)
                 if (string.IsNullOrWhiteSpace(dto.MaLopHocPhanTruong))
                 {
                     dto.DanhSachLoi.Add("Mã lớp học phần không được để trống.");
+                }
+
+                // Kiểm tra số tín chỉ
+                if (dto.SoTinChi < 1 || dto.SoTinChi > 15)
+                {
+                    dto.DanhSachLoi.Add("Số tín chỉ phải từ 1 đến 15.");
                 }
 
                 // Kiểm tra thứ trong tuần
@@ -392,15 +422,21 @@ public class ImportThoiKhoaBieuService(AppDbContext context)
                     string tenHpMoi = !string.IsNullOrWhiteSpace(dong.TenHocPhan) ? dong.TenHocPhan : dong.MaHocPhanTruong;
                     if (string.IsNullOrWhiteSpace(tenHpMoi)) tenHpMoi = "Hoc phan " + dong.MaLopHocPhanTruong;
 
+                    int soTc = dong.SoTinChi > 0 ? dong.SoTinChi : 3;
                     hp = new HocPhan
                     {
                         TenHocPhan = tenHpMoi,
-                        SoTinChi = 3,
+                        SoTinChi = soTc,
                         TrangThai = "DangApDung"
                     };
                     context.HocPhan.Add(hp);
                     await context.SaveChangesAsync(cancellationToken);
                     dsHocPhan.Add(hp);
+                }
+                else if (dong.SoTinChi > 0 && hp.SoTinChi != dong.SoTinChi)
+                {
+                    hp.SoTinChi = dong.SoTinChi;
+                    await context.SaveChangesAsync(cancellationToken);
                 }
 
                 int maHocPhan = hp.MaHocPhan;

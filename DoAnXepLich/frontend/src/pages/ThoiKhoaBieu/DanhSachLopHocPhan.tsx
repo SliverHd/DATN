@@ -139,7 +139,7 @@ function DanhSachLopHocPhan() {
                 </tr>
               ) : (
                 danhSachLop.map((lop, idx) => (
-                  <tr key={lop.maLopHocPhan}>
+                  <tr key={`${lop.maLopHocPhan}-${idx}`}>
                     <td>{idx + 1}</td>
                     <td className="fw-semibold">{lop.maLopHocPhanTruong}</td>
                     <td>{lop.tenLop}</td>

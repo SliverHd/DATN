@@ -8,6 +8,7 @@ public class DongThoiKhoaBieuImportDto
     public string MaHocPhanTruong { get; set; } = string.Empty;
     public string TenHocPhan { get; set; } = string.Empty;
     public int SoLuongSinhVien { get; set; }
+    public int SoTinChi { get; set; } = 3;
     public int Thu { get; set; }
     public int TietBatDau { get; set; }
     public int TietKetThuc { get; set; }

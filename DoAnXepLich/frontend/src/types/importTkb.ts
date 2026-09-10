@@ -5,6 +5,7 @@ export interface DongThoiKhoaBieuImport {
   maHocPhanTruong: string
   tenHocPhan: string
   soLuongSinhVien: number
+  soTinChi: number
   thu: number
   tietBatDau: number
   tietKetThuc: number

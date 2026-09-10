@@ -202,6 +202,7 @@ function ImportThoiKhoaBieu({ maHocKyChon, onImportThanhCong }: Props) {
                   <th>Mã lớp HP</th>
                   <th>Tên lớp</th>
                   <th>Môn học</th>
+                  <th>Số TC</th>
                   <th>Thứ</th>
                   <th>Tiết</th>
                   <th>Phòng</th>
@@ -216,6 +217,7 @@ function ImportThoiKhoaBieu({ maHocKyChon, onImportThanhCong }: Props) {
                     <td className="fw-semibold">{dong.maLopHocPhanTruong}</td>
                     <td>{dong.tenLop}</td>
                     <td>{dong.tenHocPhan || dong.maHocPhanTruong}</td>
+                    <td>{dong.soTinChi}</td>
                     <td>Thứ {dong.thu === 8 ? 'CN' : dong.thu}</td>
                     <td>{dong.tietBatDau} - {dong.tietKetThuc}</td>
                     <td>{dong.phongHoc || '-'}</td>
@@ -267,13 +269,12 @@ function ImportThoiKhoaBieu({ maHocKyChon, onImportThanhCong }: Props) {
                     </td>
                     <td>
                       <span
-                        className={`badge ${
-                          ls.trangThai === 'ThanhCong'
-                            ? 'bg-success'
-                            : ls.trangThai === 'MotPhan'
+                        className={`badge ${ls.trangThai === 'ThanhCong'
+                          ? 'bg-success'
+                          : ls.trangThai === 'MotPhan'
                             ? 'bg-warning text-dark'
                             : 'bg-danger'
-                        }`}
+                          }`}
                       >
                         {ls.trangThai === 'ThanhCong' ? 'Thành công' : ls.trangThai === 'MotPhan' ? 'Một phần' : 'Thất bại'}
                       </span>

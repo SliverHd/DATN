@@ -38,8 +38,7 @@ function Login() {
     <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light p-3">
       <div className="border bg-white p-4 shadow-sm" style={{ width: '100%', maxWidth: '380px' }}>
         <div className="text-center mb-4">
-          <h2 className="h4 mb-1">Xếp Lịch Giảng Dạy</h2>
-          <p className="text-muted small mb-0">Hệ thống phân công thời khóa biểu nội bộ</p>
+          <h2 className="h4 mb-1">Hệ Thống Xếp Lịch Giảng Dạy</h2>
         </div>
 
         {loi && <div className="alert alert-danger py-2 small">{loi}</div>}
